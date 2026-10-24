@@ -1,0 +1,12 @@
+node_modules/
+extension/dist/
+dist/
+release/
+.tools/
+.tmp/
+.extension-key.pem
+*.log
+*.zip
+.DS_Store
+Thumbs.db
+.vite/

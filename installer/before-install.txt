@@ -1,0 +1,19 @@
+Browser Xray installs a small local helper for the current Windows user.
+
+What this installer does:
+- Copies the helper, Xray-core, and browser extension into:
+  %LOCALAPPDATA%\BrowserXray
+- Registers the native messaging host for Chrome, Edge, Chromium, Brave,
+  and Vivaldi under HKEY_CURRENT_USER.
+- Creates Start Menu entries and an Apps & features uninstall entry.
+- Stops an older Browser Xray helper before replacing its files.
+
+What it does not do:
+- It does not require administrator rights.
+- It does not change the Windows system proxy or install a TUN/TAP adapter.
+- It does not install the browser extension automatically. Chromium requires
+  the extension to be loaded manually because this is an unpacked build.
+
+The helper and Xray binaries are unsigned. Windows SmartScreen or an
+antivirus product may warn the first time. Only continue if you trust this
+build and the place you downloaded it from.
