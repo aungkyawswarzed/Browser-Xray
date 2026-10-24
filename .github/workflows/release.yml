@@ -48,6 +48,9 @@ jobs:
           } else {
             $value = "${{ inputs.version }}"
           }
+          if ($value -match "^\d+\.\d+$") {
+            $value = "$value.0"
+          }
           if ($value -notmatch "^\d+\.\d+\.\d+$") {
             throw "Invalid release version: $value"
           }
@@ -75,6 +78,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $tag = $env:GITHUB_REF_NAME
+          gh release view $tag --json url 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Output "Release $tag already exists; preserving its published assets."
+            exit 0
+          }
           $assets = @(
             (Get-ChildItem release -Filter "BrowserXray-*-win64.zip").FullName
             (Get-ChildItem release -Filter "BrowserXray-Setup-*-win64.exe").FullName
