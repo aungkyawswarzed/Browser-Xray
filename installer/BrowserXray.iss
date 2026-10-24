@@ -4,10 +4,10 @@
 
 #define AppName "Browser Xray"
 #ifndef AppVersion
-  #define AppVersion "1.0.1"
+  #define AppVersion "1.1.0"
 #endif
 #ifndef VersionInfoVersion
-  #define VersionInfoVersion "1.0.1.0"
+  #define VersionInfoVersion "1.1.0.0"
 #endif
 #ifndef ExtensionId
   #define ExtensionId "jmopdjjejcocokfkcjjpalhadkdmjklc"

@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Browser Xray",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Route this browser through VLESS, VMess, Trojan, or Shadowsocks using a local Xray helper.",
   "minimum_chrome_version": "120",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzxN9QLlOY6I3SG4s8LXg4D6EncMcDbaqMwx+Y1i3xq3kGQzsxsdfxfBFP7yXgGxLpCS4LdvqxllJ8cypP69InbDhqzre0Zoud9tdeb7zHXQSE1y8QQLCsUrDe9ZwiQK9sSK+HWrzj/OtRDcUJvKSLw9ME1thzDX6uMP7LfPPow1a+erNOWrKAjX9FeVqITUy1vmKbdcSWqIV6vqp6lA1DjsbGpU9IjhYjoRqelJThjw9HK/XHTNzTC4QX/RggUgcT+qfcS4mb/bkxUexoQy57jAD/+wFV7sdgUZdco+eyj9mIMcPlAWChPcYGDytMEKQ579Z3vHSYFC/7J97kF1BTwIDAQAB",
   "permissions": ["proxy", "storage", "nativeMessaging", "clipboardWrite"],
-  "host_permissions": ["https://api.ipify.org/*"],
+  "host_permissions": ["https://api.ipify.org/*", "https://api.github.com/*"],
   "background": {
     "service_worker": "background.js",
     "type": "module"

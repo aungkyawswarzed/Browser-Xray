@@ -84,6 +84,34 @@ button:disabled {
   padding-bottom: 8px;
 }
 
+/* Release updates */
+
+.update-notice {
+  margin: 10px 16px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.update-notice.available {
+  padding: 12px;
+  border: 1px solid rgba(94, 234, 212, 0.3);
+  border-radius: 14px;
+  background: rgba(94, 234, 212, 0.06);
+}
+
+.update-banner,
+.update-check-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.update-banner strong { color: var(--accent); font-size: 13px; }
+.update-banner p { margin: 5px 0 10px; line-height: 1.5; }
+.update-link { text-decoration: none; flex-shrink: 0; }
+.update-check-row .ghost-button { font-size: 11px; white-space: nowrap; }
+
 /* Header */
 
 .topbar {

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-const helperVersion = "1.0.1"
+const helperVersion = "1.1.0"
 
 func main() {
 	dataDir, err := resolveDataDir()

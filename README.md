@@ -2,7 +2,7 @@
 
 [Download the latest release](https://github.com/aungkyawswarzed/Browser-Xray/releases/latest) · [Changelog](CHANGELOG.md) · [Release guide](RELEASING.md)
 
-See [1.0.1 validation](https://github.com/aungkyawswarzed/Browser-Xray/blob/main/docs/VALIDATION-1.0.1.md) for tested behavior and remaining manual checks.
+See [1.1.0 validation](https://github.com/aungkyawswarzed/Browser-Xray/blob/main/docs/VALIDATION-1.1.0.md) for tested behavior and remaining manual checks.
 
 A Windows browser extension that connects this browser profile - and only this browser profile - to a VLESS, VMess, Trojan, or Shadowsocks server. It uses a small local helper that runs the bundled [Xray-core](https://github.com/XTLS/Xray-core) engine and exposes a loopback HTTP proxy. Chrome's extension proxy API points the browser at that loopback port. Windows, other browsers, and other applications are never touched.
 
@@ -83,13 +83,34 @@ method (Setup EXE or ZIP); do not maintain two installations of the same host.
 Download `SHA256SUMS.txt` alongside the installer or ZIP. In PowerShell:
 
 ```powershell
-Get-FileHash .\BrowserXray-Setup-1.0.1-win64.exe -Algorithm SHA256
-Get-FileHash .\BrowserXray-1.0.1-win64.zip -Algorithm SHA256
+Get-FileHash .\BrowserXray-Setup-1.1.0-win64.exe -Algorithm SHA256
+Get-FileHash .\BrowserXray-1.1.0-win64.zip -Algorithm SHA256
 ```
 
 Compare the hashes with the matching filenames in `SHA256SUMS.txt`. Checksums
 detect corrupted or changed downloads; they do not replace a trusted publisher's
 digital signature.
+
+### Check for updates
+
+The extension checks this repository's latest stable GitHub release when the
+main screen opens. Results are cached for six hours; failed checks are retried
+after 15 minutes on the next opening. **Check for updates** bypasses the cache.
+If a newer numeric version is available, the main screen displays an update
+notice. **Update** opens that version's GitHub release page in a new tab.
+
+Updating is manual: disconnect, download/run the new Setup EXE (or ZIP installer),
+then reload the extension in `chrome://extensions` / `edge://extensions` and
+reconnect. Saved servers are retained. The update notice itself does not install
+software, stop the tunnel, or change proxy settings. Draft/prerelease releases
+are not offered, and an offline/rate-limited check is not reported as up to date.
+
+Update checks send a normal HTTPS request to `api.github.com` with no GitHub
+login credentials, server profiles, or share links attached. GitHub can see the
+request's network address. The request uses the browser's current network/proxy
+configuration and requires the extension's `api.github.com` host permission.
+When upgrading to the first version with this feature, Chrome/Edge may ask you
+to approve that new permission or re-enable the extension after reloading it.
 
 ## Build from source
 

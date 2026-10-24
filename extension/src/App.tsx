@@ -17,6 +17,7 @@ import { SetupView } from "./components/SetupView";
 import { Modal } from "./components/Modal";
 import { Toast } from "./components/Toast";
 import { LogoMark } from "./components/Icons";
+import { UpdateNotice } from "./components/UpdateNotice";
 
 type View = "home" | "import" | "settings" | "setup";
 type Action = "connect" | "disconnect" | null;
@@ -292,6 +293,7 @@ export default function App() {
             onSettings={() => setView("settings")}
           />
           <main className="home">
+            <UpdateNotice />
             <StatusCard
               connection={connection}
               profile={displayProfile}

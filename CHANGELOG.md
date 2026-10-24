@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0
+
+- Added a main-screen GitHub update checker with cached automatic checks and a
+  manual **Check for updates** button.
+- New-version notice links directly to the matching GitHub release with
+  **Update**; installation and extension reload remain manual.
+- Added restricted GitHub API host permission, numeric version comparison,
+  stable-release validation, timeouts, error/backoff handling, and update tests.
+- Update requests omit credentials/profile data; API/cache URLs are not trusted.
+- Chrome/Edge may ask to approve the new GitHub API permission after upgrading.
+  Reload the extension after installation; saved servers remain intact.
+
 ## 1.0.1
 
 ### Fixed

@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$BrowserXrayVersion = "1.0.1"
+$BrowserXrayVersion = "1.1.0"
 $BrowserXrayHostName = "com.browserxray.helper"
 $XrayVersion = "26.10.21"
 $XrayZipSha256 = "fc58c39ee2f2717b4c54d28d374362389e5319b20ae44aea76ea45a5243ec827"
