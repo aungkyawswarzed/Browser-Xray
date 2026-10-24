@@ -96,7 +96,7 @@ $xrayLicense = Join-Path $SourceRoot "helper\LICENSE-Xray-core.txt"
 if (Test-Path $xrayLicense) {
     Copy-Item -Path $xrayLicense -Destination (Join-Path $licenseDir "LICENSE-Xray-core.txt") -Force
 }
-foreach ($name in "README.md", "README.txt") {
+foreach ($name in "README.md", "README.txt", "CHANGELOG.md", "RELEASING.md") {
     $source = Join-Path $SourceRoot $name
     if (Test-Path $source) {
         Copy-Item -Path $source -Destination (Join-Path $InstallDir $name) -Force

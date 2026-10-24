@@ -15,11 +15,21 @@ Both installers are **per-user**. They write to `%LOCALAPPDATA%\BrowserXray`, re
 
 Use a three-part numeric version such as `1.0.0`. Chrome extension manifests do not accept arbitrary SemVer suffixes.
 
-Before building, bump the version in all three places:
+Before building, synchronize these version declarations:
 
 - `scripts/common.ps1` (`$BrowserXrayVersion`)
 - `extension/public/manifest.json` (`version`)
 - `extension/package.json` (`version`)
+- `extension/package-lock.json` (root and root-package versions)
+- `helper/cmd/helper/main.go` (`helperVersion`)
+- `installer/BrowserXray.iss` (default `AppVersion` and `VersionInfoVersion`)
+- `scripts/test-helper.mjs` (expected helper version)
+
+Add a `## X.Y.Z` section to [CHANGELOG.md](CHANGELOG.md). The release script
+copies that section into generated release notes. Use a new patch version when
+the installer changes; never replace an existing release's binaries/checksums.
+The initial GitHub tag `v1.0` contains internal app version `1.0.0`; subsequent
+releases use three-part tags, starting with `v1.0.1`.
 
 If you use npm, the package lock can be refreshed with:
 
@@ -28,7 +38,9 @@ cd extension
 npm install --package-lock-only
 ```
 
-`scripts/release.ps1` refuses to build if those versions do not match.
+`scripts/release.ps1` refuses to build if the app, manifest, package/lock,
+helper, and installer versions do not match. The integration test separately
+checks the helper's reported version.
 
 ## Prerequisites for a local release build
 
@@ -55,8 +67,12 @@ The Xray-core and Go downloads are pinned and checksum-verified in `scripts/comm
 From the project root:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\release.ps1 -Version 1.0.0
+powershell -ExecutionPolicy Bypass -File .\scripts\release.ps1 -Version 1.0.1
 ```
+
+Examples below using `1.0.0` illustrate the same process; replace that version
+with the version being released. For this patch the tag is `v1.0.1` and all
+artifact filenames contain `1.0.1`.
 
 The script:
 
@@ -98,6 +114,24 @@ A silent test install can be done with a temporary directory. The
 `SKIPNATIVEREG=1` switch is a test-only switch that prevents the installer from
 changing the browser native-messaging registry keys:
 
+**Use a disposable Windows user/VM for the manual example below.** A different
+`/DIR` does not isolate the fixed Apps entry or default Start Menu shortcuts.
+On a development machine with Browser Xray already installed, use the regression
+test instead:
+
+```powershell
+.\scripts\test-installer.ps1
+# Or test a particular build:
+.\scripts\test-installer.ps1 -SetupPath .\release\BrowserXray-Setup-1.0.1-win64.exe
+```
+
+The test uses a unique directory and Start Menu group, disables desktop/native
+registration changes, backs up and restores the existing Inno Apps entry, and
+seeds old files to verify cleanup. Do not run it concurrently with another
+install/uninstall. If registry restoration fails, retain the reported backup
+and restore it before installing again. It does not test browser UI or a live
+commercial proxy.
+
 ```powershell
 $testDir = Join-Path $env:TEMP "BrowserXray-InstallerTest"
 Start-Process .\release\BrowserXray-Setup-1.0.0-win64.exe `
@@ -134,6 +168,12 @@ The workflow installs Node, Go, and Inno Setup on a `windows-latest` runner,
 runs the tests, builds both artifacts, and creates the release. It needs the
 default `GITHUB_TOKEN` with `contents: write`, which is declared in the
 workflow. No personal token is stored in the repository.
+
+It also runs helper integration, local VLESS end-to-end, and installer cleanup
+tests. An existing release is preserved rather than overwritten. When publishing
+a tested local build manually, create a draft at the exact source commit, upload
+all assets, verify uploaded SHA-256 digests, then publish and mark it latest.
+Do not upload `release/` folders from multiple versions using a broad wildcard.
 
 You can also run the workflow manually from the Actions tab. A manual run builds
 and uploads the artifacts, but does not create a GitHub Release; use a tag for
@@ -176,6 +216,10 @@ signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 `
 ```
 
 Rebuild the ZIP and checksums after signing any files that are inside the ZIP.
+Sign payload binaries **before** rebuilding both ZIP and Setup EXE; signing only
+the ZIP's helper does not update the helper embedded in the installer. Sign the
+final Setup EXE last, then regenerate outer checksums and the release-note hash
+block without recompiling the signed installer.
 Keep the signing certificate and its password out of the repository and CI logs.
 
 ## What must never be committed or uploaded
@@ -191,6 +235,8 @@ from `dist/`, so the extension key is not included in the ZIP or Setup EXE.
 ## Release checklist
 
 - [ ] Version bumped in `common.ps1`, `manifest.json`, and `package.json`.
+- [ ] Helper, package lock, installer defaults, and version test synchronized.
+- [ ] Version changes documented in `CHANGELOG.md`.
 - [ ] `npm test` passes.
 - [ ] `go test ./...` passes.
 - [ ] `node scripts/test-helper.mjs` passes.
@@ -198,7 +244,26 @@ from `dist/`, so the extension key is not included in the ZIP or Setup EXE.
 - [ ] `scripts/release.ps1` completes without errors.
 - [ ] Setup EXE installs and uninstalls as a normal user.
 - [ ] Portable ZIP installs and uninstalls as a normal user.
+- [ ] `scripts/test-installer.ps1` verifies legacy-file cleanup.
 - [ ] Extension loads with the expected ID and connects through a real server.
 - [ ] `SHA256SUMS.txt` verifies.
 - [ ] Unsigned-binary warning is mentioned in the release notes.
 - [ ] Tag pushed as `v<version>`.
+- [ ] Published tag targets the intended commit; all uploaded asset digests match.
+- [ ] Latest release and repository About/download links verified publicly.
+
+## Repository About metadata
+
+GitHub's **About** sidebar is repository metadata, not README content, so a git
+push alone cannot update it. In the repository's About settings use:
+
+- Description: Windows Chromium extension for browser-profile proxying via
+  VLESS, VMess, Trojan and Shadowsocks, with a bundled Xray helper and installer.
+- Website: https://github.com/aungkyawswarzed/Browser-Xray/releases/latest
+- Topics: `browser-extension`, `chromium`, `windows`, `xray-core`, `vless`,
+  `vmess`, `trojan`, `shadowsocks`, `native-messaging`, `proxy`.
+
+An owner/admin can also update description/homepage with GitHub's repository
+REST API and topics with its replace-topics endpoint. Use a credential manager
+or GitHub CLI; never commit tokens or print them in build logs. README download
+links and the latest-release redirect should continue to work across versions.

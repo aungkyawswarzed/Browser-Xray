@@ -99,7 +99,7 @@ if (-not $SkipHelper) {
     Write-Ok "Xray $XrayVersion bundled"
 }
 
-foreach ($name in "LICENSE", "THIRD-PARTY-NOTICES.md", "README.md") {
+foreach ($name in "LICENSE", "THIRD-PARTY-NOTICES.md", "README.md", "CHANGELOG.md", "RELEASING.md") {
     $source = Join-Path $projectRoot $name
     if (Test-Path $source) {
         Copy-Item -Path $source -Destination (Join-Path $distDir $name) -Force

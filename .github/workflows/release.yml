@@ -60,6 +60,18 @@ jobs:
         shell: pwsh
         run: .\scripts\release.ps1 -Version "${{ steps.version.outputs.value }}"
 
+      - name: Test helper integration
+        shell: pwsh
+        run: node scripts/test-helper.mjs
+
+      - name: Test local VLESS data path
+        shell: pwsh
+        run: node scripts/test-e2e.mjs
+
+      - name: Test installer cleanup
+        shell: pwsh
+        run: .\scripts\test-installer.ps1
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -87,5 +99,6 @@ jobs:
             (Get-ChildItem release -Filter "BrowserXray-*-win64.zip").FullName
             (Get-ChildItem release -Filter "BrowserXray-Setup-*-win64.exe").FullName
             (Join-Path $PWD "release\SHA256SUMS.txt")
+            (Join-Path $PWD "release\RELEASE_NOTES.md")
           )
           gh release create $tag @assets --title "Browser Xray $tag" --notes-file release/RELEASE_NOTES.md

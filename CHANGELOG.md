@@ -1,0 +1,42 @@
+# Changelog
+
+## 1.0.1
+
+### Fixed
+
+- Setup uninstall now removes application-owned leftovers from older source/ZIP
+  installs: old files in `bin`, stale extension assets, and old license files.
+- Existing removal of logs, runtime state, tools, native-host registration,
+  Start Menu/desktop shortcuts, and the Apps entry is retained.
+- Setup now lets users choose the Start Menu folder and honors `/GROUP` for
+  isolated regression tests.
+
+### Documentation and verification
+
+- Added direct download links, upgrade and shortcut instructions, checksum
+  verification, and explicit cleanup boundaries.
+- Added a repeatable installer regression test for stale-file cleanup that
+  preserves an existing user's native registration, shortcuts, and Apps entry.
+- Updated release/versioning and repository About maintenance instructions.
+
+No proxy-protocol or routing behavior changed. Extension removal remains manual;
+remove it through Chrome/Edge to delete browser-stored profiles and clear its
+browser-managed proxy settings. The installer does not delete downloaded release
+files, source code, or unrelated browser data.
+
+## 1.0.0 (GitHub tag `v1.0`)
+
+- Initial Windows x64 release: Chromium MV3 extension and native Go helper with
+  bundled Xray-core, supporting VLESS, VMess, Trojan, and Shadowsocks share links.
+- Per-user Setup EXE and ZIP installation with native messaging, Start Menu
+  shortcuts, optional desktop shortcut, Apps entry, licenses, and uninstallers.
+- Published installer, ZIP, checksums, and release notes.
+
+## Known limitations
+
+- Windows/Chromium only; extension must be loaded unpacked in Developer mode.
+- Unsigned binaries may trigger SmartScreen/antivirus warnings.
+- Fail-open routing; no UDP/WebRTC protection or system-wide VPN/TUN.
+- Saved credentials are not encrypted at rest.
+- Automated data-path tests use a local VLESS server; live commercial-server
+  browsing and interactive browser UI checks still require manual testing.

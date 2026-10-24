@@ -58,6 +58,24 @@ if ($packageVersion -ne $Version) {
 if ($BrowserXrayVersion -ne $Version) {
     throw "Version mismatch: scripts/common.ps1 is $BrowserXrayVersion, but the release version is $Version. Bump common.ps1 first."
 }
+# Windows PowerShell 5.1 cannot ConvertFrom-Json npm's empty package key.
+$lockPath = Join-Path $projectRoot "extension\package-lock.json"
+$lockJson = & node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); console.log(JSON.stringify([p.version,p.packages[''].version]));" $lockPath
+if ($LASTEXITCODE -ne 0) { throw "Could not read package-lock versions with Node.js." }
+$lockVersions = $lockJson | ConvertFrom-Json
+if ($lockVersions[0] -ne $Version -or $lockVersions[1] -ne $Version) {
+    throw "Version mismatch: synchronize both root versions in extension/package-lock.json."
+}
+$helperSource = [System.IO.File]::ReadAllText((Join-Path $projectRoot "helper\cmd\helper\main.go"))
+$helperVersionMatch = [regex]::Match($helperSource, 'const helperVersion = "([^"]+)"')
+if (-not $helperVersionMatch.Success -or $helperVersionMatch.Groups[1].Value -ne $Version) {
+    throw "Version mismatch: synchronize helper/cmd/helper/main.go helperVersion."
+}
+$installerSource = [System.IO.File]::ReadAllText($issPath)
+if ($installerSource -notmatch ('#define AppVersion "' + [regex]::Escape($Version) + '"') -or
+    $installerSource -notmatch ('#define VersionInfoVersion "' + [regex]::Escape($Version + '.0') + '"')) {
+    throw "Version mismatch: synchronize installer/BrowserXray.iss defaults."
+}
 
 if (-not $SkipBuild) {
     Write-Step "Building Browser Xray $Version"
@@ -97,6 +115,8 @@ $rootFiles = @(
     "LICENSE",
     "THIRD-PARTY-NOTICES.md",
     "README.md",
+    "CHANGELOG.md",
+    "RELEASING.md",
     "README.txt",
     "extension-id.txt",
     "install.ps1",
@@ -203,6 +223,10 @@ profile through a VLESS, VMess, Trojan, or Shadowsocks server. A small local
 helper runs the bundled Xray-core engine and exposes a loopback HTTP proxy;
 the browser extension points Chromium at that proxy.
 
+## Changes
+
+{{CHANGES}}
+
 ## Install (recommended)
 
 1. Download and run `BrowserXray-Setup-{{VERSION}}-win64.exe`.
@@ -243,14 +267,27 @@ The same checksums are attached as `SHA256SUMS.txt`.
   cleared and the browser falls back to its normal connection.
 - Saved server credentials are stored by the extension in this browser
   profile. They are not encrypted at rest.
+- This is not a system-wide VPN; UDP/WebRTC traffic is not protected.
+- Automated browsing tests use a local VLESS server. Live commercial-server
+  browsing and interactive browser UI checks still require manual testing.
 
 ## Uninstall
 
 Use **Uninstall Browser Xray** in the Start Menu, or **Settings > Apps >
 Installed apps**. Remove the extension separately from the browser's
 extensions page; removing the extension deletes its saved profiles.
+The uninstaller removes helper/Xray files, application-owned legacy files,
+logs, runtime state, native registration, and Start Menu/desktop shortcuts.
+Downloaded installers, source code, and unrelated browser data are not deleted.
 '@
-$notes = $notesTemplate.Replace("{{VERSION}}", $Version).Replace("{{EXTENSION_ID}}", $extensionId).Replace("{{CHECKSUMS}}", $checksumText.TrimEnd())
+$changelogPath = Join-Path $projectRoot "CHANGELOG.md"
+$changes = "See the repository CHANGELOG.md for version history."
+if (Test-Path $changelogPath) {
+    $changelog = [System.IO.File]::ReadAllText($changelogPath)
+    $section = [regex]::Match($changelog, '(?ms)^## ' + [regex]::Escape($Version) + '\r?\n(.*?)(?=^## |\z)')
+    if ($section.Success) { $changes = $section.Groups[1].Value.Trim() }
+}
+$notes = $notesTemplate.Replace("{{VERSION}}", $Version).Replace("{{EXTENSION_ID}}", $extensionId).Replace("{{CHECKSUMS}}", $checksumText.TrimEnd()).Replace("{{CHANGES}}", $changes)
 Write-Utf8NoBom -Path (Join-Path $releaseDir "RELEASE_NOTES.md") -Content $notes
 
 Write-Host ""

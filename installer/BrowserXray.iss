@@ -4,10 +4,10 @@
 
 #define AppName "Browser Xray"
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.0.1"
 #endif
 #ifndef VersionInfoVersion
-  #define VersionInfoVersion "1.0.0.0"
+  #define VersionInfoVersion "1.0.1.0"
 #endif
 #ifndef ExtensionId
   #define ExtensionId "jmopdjjejcocokfkcjjpalhadkdmjklc"
@@ -37,7 +37,8 @@ AppPublisher=Browser Xray contributors
 AppCopyright=Copyright (C) 2026 Browser Xray contributors
 DefaultDirName={localappdata}\BrowserXray
 DefaultGroupName=Browser Xray
-DisableProgramGroupPage=yes
+; Keep /GROUP overrides effective for isolated install/uninstall regression tests.
+DisableProgramGroupPage=no
 AllowNoIcons=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
@@ -86,6 +87,8 @@ Source: "{#PayloadDir}\extension\*"; DestDir: "{app}\extension"; Flags: ignoreve
 Source: "{#PayloadDir}\LICENSE"; DestDir: "{app}\licenses"; DestName: "LICENSE"; Flags: ignoreversion
 Source: "{#PayloadDir}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}\licenses"; Flags: ignoreversion
 Source: "{#PayloadDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PayloadDir}\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PayloadDir}\RELEASING.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadDir}\README.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadDir}\extension-id.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadDir}\BrowserXray.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -107,6 +110,11 @@ Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -N
 
 [UninstallDelete]
 Type: files; Name: "{app}\com.browserxray.helper.json"
+; Remove application-owned leftovers from earlier portable/source installs,
+; including old extension assets and the previously bundled license in bin.
+Type: filesandordirs; Name: "{app}\bin"
+Type: filesandordirs; Name: "{app}\extension"
+Type: filesandordirs; Name: "{app}\licenses"
 Type: filesandordirs; Name: "{app}\runtime"
 Type: filesandordirs; Name: "{app}\logs"
 Type: filesandordirs; Name: "{app}\tools"

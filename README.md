@@ -1,5 +1,9 @@
 # Browser Xray
 
+[Download the latest release](https://github.com/aungkyawswarzed/Browser-Xray/releases/latest) · [Changelog](CHANGELOG.md) · [Release guide](RELEASING.md)
+
+See [1.0.1 validation](https://github.com/aungkyawswarzed/Browser-Xray/blob/main/docs/VALIDATION-1.0.1.md) for tested behavior and remaining manual checks.
+
 A Windows browser extension that connects this browser profile - and only this browser profile - to a VLESS, VMess, Trojan, or Shadowsocks server. It uses a small local helper that runs the bundled [Xray-core](https://github.com/XTLS/Xray-core) engine and exposes a loopback HTTP proxy. Chrome's extension proxy API points the browser at that loopback port. Windows, other browsers, and other applications are never touched.
 
 **Status:** working Windows x64 build for Chrome, Edge, and other Chromium browsers, with a per-user Setup EXE and a portable ZIP. The helper protocol, Xray configuration generation, and the full local data path (HTTP and CONNECT through a real local VLESS hop) are tested. It has not yet been tried against a live commercial proxy from this machine.
@@ -42,7 +46,7 @@ For building from source:
 
 ## Install a release
 
-Download the files from the GitHub Releases page, or use the `release/` output from a local build.
+Download the files from [GitHub Releases](https://github.com/aungkyawswarzed/Browser-Xray/releases/latest), or use the `release/` output from a local build.
 
 **Recommended:** run `BrowserXray-Setup-<version>-win64.exe`. It is a per-user installer: it copies the helper and extension, registers the native messaging host, creates Start Menu and Apps & features entries, and includes an uninstaller. It does not request administrator rights and does not change the system proxy.
 
@@ -60,6 +64,32 @@ After either install:
 The extension ID must remain `jmopdjjejcocokfkcjjpalhadkdmjklc`. The installer registers the native helper for Chrome, Chrome Beta/Dev, Edge, Chromium, Brave, and Vivaldi under `HKCU`.
 
 The binaries are unsigned. Windows SmartScreen or an antivirus product may warn on first launch. See [RELEASING.md](RELEASING.md) for build, signing, and publishing details.
+
+### Shortcuts and upgrades
+
+The Start Menu **Browser Xray** folder contains setup, help, and uninstall
+shortcuts. The setup shortcut opens the browser extensions page; it is not a
+standalone VPN application. Select **Create a desktop shortcut** in the Setup
+wizard if desired. For the ZIP installer, run `install.ps1 -DesktopShortcut`.
+
+To upgrade, disconnect first, run the newer installer for the same Windows user
+and installation folder, then reload the extension in Chrome/Edge and reconnect.
+Setup stops the old helper while replacing files. Browser-stored profiles remain
+intact unless you remove the extension. Prefer keeping the same installation
+method (Setup EXE or ZIP); do not maintain two installations of the same host.
+
+### Verify a download
+
+Download `SHA256SUMS.txt` alongside the installer or ZIP. In PowerShell:
+
+```powershell
+Get-FileHash .\BrowserXray-Setup-1.0.1-win64.exe -Algorithm SHA256
+Get-FileHash .\BrowserXray-1.0.1-win64.zip -Algorithm SHA256
+```
+
+Compare the hashes with the matching filenames in `SHA256SUMS.txt`. Checksums
+detect corrupted or changed downloads; they do not replace a trusted publisher's
+digital signature.
 
 ## Build from source
 
@@ -238,6 +268,12 @@ The helper asks Windows for a free loopback port for every connection. A race is
 ## Uninstall
 
 If you used the Setup EXE, use **Uninstall Browser Xray** in the Start Menu or **Settings > Apps > Installed apps**. The Inno Setup uninstaller stops the helper and removes the native messaging registration.
+
+It also removes Start Menu/desktop shortcuts, bundled binaries, extension files,
+licenses, logs, runtime state, and application-owned leftovers from older installs.
+The browser extension itself must be removed in Chrome/Edge to clear saved profiles
+and browser-managed proxy settings. Downloaded installers and this source folder
+are not deleted by the uninstaller.
 
 For a source or portable install, run:
 
