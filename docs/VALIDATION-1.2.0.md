@@ -40,7 +40,8 @@ release assets rather than replacing their binaries or checksums.
 2. Open `chrome://extensions` / `edge://extensions` and reload Browser Xray. No
    new permissions are required. Saved servers and the whitelist should remain
    available.
-3. Verify the popup footer is `v1.2.0`.
+3. Verify the popup footer is `v1.2.0` and **Open data folder** opens a visible
+   File Explorer window.
 4. While connected, open **Settings → Whitelist** and add an IP-echo site such as
    `ifconfig.me`. Visiting it should show the normal connection's address, while
    **Check exit IP** (`api.ipify.org`) still shows the tunnel address. Remove the

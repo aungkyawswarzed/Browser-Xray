@@ -19,6 +19,11 @@
   existing tunnel; only a new browser session forces a manual reconnect.
 - Diagnostics now include the whitelist.
 
+### Fixed
+
+- **Open data folder** now opens a visible File Explorer window instead of a
+  hidden one.
+
 ## 1.1.0
 
 - Added a main-screen GitHub update checker with cached automatic checks and a

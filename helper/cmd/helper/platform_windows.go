@@ -72,7 +72,5 @@ func killTree(pid int) {
 }
 
 func openFolder(path string) error {
-	cmd := exec.Command("explorer.exe", path)
-	hideWindow(cmd)
-	return cmd.Start()
+	return exec.Command("explorer.exe", path).Start()
 }
