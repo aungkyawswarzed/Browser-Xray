@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.2.0
+
+### Added
+
+- Added a **Whitelist** in Settings. Listed domains and their subdomains bypass
+  the tunnel, can be added from a domain or full URL, and apply immediately
+  while connected.
+- Added browser-restart detection. A new browser session clears the old proxy,
+  disconnects the previous helper session, marks the connection as disconnected,
+  and shows a dismissible **Connection reset** notice so the user can reconnect.
+- Added whitelist validation, deduplication, a 50-entry limit, and tests for
+  domain normalization, proxy bypass patterns, and browser-session resets.
+
+### Changed
+
+- Service-worker restarts within the same browser session still recover the
+  existing tunnel; only a new browser session forces a manual reconnect.
+- Diagnostics now include the whitelist.
+
 ## 1.1.0
 
 - Added a main-screen GitHub update checker with cached automatic checks and a

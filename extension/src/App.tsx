@@ -17,6 +17,7 @@ import { SetupView } from "./components/SetupView";
 import { Modal } from "./components/Modal";
 import { Toast } from "./components/Toast";
 import { LogoMark } from "./components/Icons";
+import { RestartNotice } from "./components/RestartNotice";
 import { UpdateNotice } from "./components/UpdateNotice";
 
 type View = "home" | "import" | "settings" | "setup";
@@ -209,13 +210,28 @@ export default function App() {
       connection: { phase: "disconnected" },
       profiles: [],
       selectedProfileId: null,
-      helper
+      helper,
+      bypassList: state?.bypassList ?? [],
+      restartNotice: false
     });
     setExitIp(null);
     setClearConfirm(false);
     setView("home");
     showToast("info", "All saved servers were removed.");
-  }, [setState, showToast, state?.helper]);
+  }, [setState, showToast, state?.bypassList, state?.helper]);
+
+  const dismissRestartNotice = useCallback(async () => {
+    try {
+      const response = await sendBackground({ type: "dismissRestartNotice" });
+      if (!response.ok) {
+        showToast("error", response.error);
+      } else if (response.state) {
+        setState(response.state);
+      }
+    } catch (error) {
+      showToast("error", error instanceof Error ? error.message : "Could not dismiss the notice.");
+    }
+  }, [setState, showToast]);
 
   const openData = useCallback(async () => {
     try {
@@ -293,6 +309,7 @@ export default function App() {
             onSettings={() => setView("settings")}
           />
           <main className="home">
+            {state.restartNotice && <RestartNotice onDismiss={dismissRestartNotice} />}
             <UpdateNotice />
             <StatusCard
               connection={connection}

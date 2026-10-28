@@ -1,3 +1,5 @@
+import { buildBypassPatterns } from "./bypass";
+
 interface ProxySettingResult {
   value: chrome.proxy.ProxyConfig;
   levelOfControl:
@@ -6,8 +8,6 @@ interface ProxySettingResult {
     | "controllable_by_this_extension"
     | "controlled_by_this_extension";
 }
-
-const BYPASS_LIST = ["<local>", "localhost", "127.0.0.1", "[::1]"];
 
 function getProxySettings(): Promise<ProxySettingResult> {
   return new Promise((resolve, reject) => {
@@ -21,7 +21,7 @@ function getProxySettings(): Promise<ProxySettingResult> {
   });
 }
 
-export async function applyProxy(port: number): Promise<void> {
+export async function applyProxy(port: number, bypassList: string[]): Promise<void> {
   const value: chrome.proxy.ProxyConfig = {
     mode: "fixed_servers",
     rules: {
@@ -30,7 +30,7 @@ export async function applyProxy(port: number): Promise<void> {
         host: "127.0.0.1",
         port
       },
-      bypassList: BYPASS_LIST
+      bypassList: buildBypassPatterns(bypassList)
     }
   };
 

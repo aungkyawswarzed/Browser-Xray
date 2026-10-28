@@ -2,7 +2,7 @@
 
 [Download the latest release](https://github.com/aungkyawswarzed/Browser-Xray/releases/latest) · [Changelog](CHANGELOG.md) · [Release guide](RELEASING.md)
 
-See [1.1.0 validation](https://github.com/aungkyawswarzed/Browser-Xray/blob/main/docs/VALIDATION-1.1.0.md) for tested behavior and remaining manual checks.
+See [1.2.0 validation](https://github.com/aungkyawswarzed/Browser-Xray/blob/main/docs/VALIDATION-1.2.0.md) for tested behavior and remaining manual checks.
 
 A Windows browser extension that connects this browser profile - and only this browser profile - to a VLESS, VMess, Trojan, or Shadowsocks server. It uses a small local helper that runs the bundled [Xray-core](https://github.com/XTLS/Xray-core) engine and exposes a loopback HTTP proxy. Chrome's extension proxy API points the browser at that loopback port. Windows, other browsers, and other applications are never touched.
 
@@ -83,8 +83,8 @@ method (Setup EXE or ZIP); do not maintain two installations of the same host.
 Download `SHA256SUMS.txt` alongside the installer or ZIP. In PowerShell:
 
 ```powershell
-Get-FileHash .\BrowserXray-Setup-1.1.0-win64.exe -Algorithm SHA256
-Get-FileHash .\BrowserXray-1.1.0-win64.zip -Algorithm SHA256
+Get-FileHash .\BrowserXray-Setup-1.2.0-win64.exe -Algorithm SHA256
+Get-FileHash .\BrowserXray-1.2.0-win64.zip -Algorithm SHA256
 ```
 
 Compare the hashes with the matching filenames in `SHA256SUMS.txt`. Checksums
@@ -111,6 +111,25 @@ request's network address. The request uses the browser's current network/proxy
 configuration and requires the extension's `api.github.com` host permission.
 When upgrading to the first version with this feature, Chrome/Edge may ask you
 to approve that new permission or re-enable the extension after reloading it.
+
+### Whitelist sites
+
+Open **Settings → Whitelist** and add a domain such as `example.com`. Matching
+sites and their subdomains connect directly without the Xray tunnel. Entries are
+saved for this browser profile and apply immediately, including while connected.
+A pasted `https://…` URL is reduced to its hostname. Loopback addresses are always
+bypassed. The whitelist only affects HTTP/HTTPS proxy routing; WebRTC/UDP traffic
+is outside the tunnel regardless.
+
+### Browser restarts
+
+When the browser starts again, Browser Xray clears any leftover proxy setting,
+stops the previous helper session, marks the connection as disconnected, and
+shows a **Connection reset** notice. Click **Connect** to start a new tunnel;
+saved servers and the whitelist are kept. A full browser restart is required:
+closing the last window does not count if the browser keeps running in the
+background. A normal service-worker restart while the browser stays open
+reconnects automatically.
 
 ## Build from source
 
@@ -155,8 +174,10 @@ Not supported in this build: KCP/QUIC/H2 transports, Shadowsocks plugins (obfs, 
 - **Check exit IP** makes one HTTPS request to `api.ipify.org` through the tunnel. It is user-initiated; nothing is sent in the background.
 - Selecting another server while connected automatically reconnects to it.
 - The power button disconnects, clears the browser proxy, stops Xray, and removes the runtime state.
-- **Settings** shows helper/Xray versions, the data folder, the browser proxy state, and a diagnostics report. Copying diagnostics does not include UUIDs or passwords.
+- **Settings** shows helper/Xray versions, the data folder, the whitelist, and a diagnostics report. Copying diagnostics does not include UUIDs or passwords.
+- The whitelist makes selected domains and their subdomains connect directly. Changes apply immediately, including while connected.
 - Settings can clear all saved servers. Removing the extension also removes its saved profiles from Chrome's extension storage.
+- After a browser restart, the tunnel is reset and must be started again with **Connect**.
 
 Browser proxy settings are applied to the whole regular browser profile, not to one tab. Incognito windows inherit the setting if the extension is allowed in Incognito; Chrome's own extension settings decide that.
 
@@ -184,9 +205,11 @@ Only install a helper build you trust: the extension's native host permission le
 
 The extension opens a long-lived native messaging port while connected, which also keeps the MV3 service worker alive. If Chrome closes the port, the helper sees EOF, stops Xray, and exits. On Windows, Xray is additionally assigned to a Job Object with `KILL_ON_JOB_CLOSE`, so a helper crash or Chrome termination does not leave an orphaned Xray process.
 
-The native port is closed when disconnected. On browser startup (or after an extension update), the extension checks the persisted connection state:
+The native port is closed when disconnected. A browser restart is treated as a new session: the extension clears any leftover browser proxy, disconnects the helper, marks the connection as disconnected, and shows a restart notice instead of reconnecting silently. The user starts the tunnel again with **Connect**.
 
-- If the previous session was connected and the helper still has the same tunnel, it re-applies the browser proxy.
+Within the same browser session, a service-worker restart (for example, after Chrome suspends it) still recovers the tunnel:
+
+- If the previous session was connected and the helper still has the same tunnel, it re-applies the browser proxy and whitelist.
 - If the tunnel is gone, it reconnects once with the last profile.
 - If that fails, it clears the proxy and shows the error, so the browser is not left pointing at a dead port.
 

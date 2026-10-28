@@ -1,9 +1,13 @@
 import type { ConnectionState, Profile } from "../types";
+import { normalizeBypassList } from "./bypass";
 
 const PROFILES_KEY = "profiles";
 const SELECTED_KEY = "selectedProfileId";
 const CONNECTION_KEY = "connection";
 const PROXY_ERROR_KEY = "lastProxyError";
+const BYPASS_KEY = "bypassList";
+const RESTART_KEY = "restartNotice";
+const SESSION_KEY = "browserSessionActive";
 
 const DEFAULT_CONNECTION: ConnectionState = { phase: "disconnected" };
 
@@ -55,11 +59,52 @@ export async function saveLastProxyError(error: string | undefined): Promise<voi
   }
 }
 
+export async function loadBypassList(): Promise<string[]> {
+  const result = await chrome.storage.local.get(BYPASS_KEY);
+  return normalizeBypassList(result[BYPASS_KEY]);
+}
+
+export async function saveBypassList(bypassList: string[]): Promise<void> {
+  await chrome.storage.local.set({ [BYPASS_KEY]: normalizeBypassList(bypassList) });
+}
+
+export async function loadRestartNotice(): Promise<boolean> {
+  const result = await chrome.storage.local.get(RESTART_KEY);
+  return result[RESTART_KEY] === true;
+}
+
+export async function saveRestartNotice(value: boolean): Promise<void> {
+  if (value) {
+    await chrome.storage.local.set({ [RESTART_KEY]: true });
+  } else {
+    await chrome.storage.local.remove(RESTART_KEY);
+  }
+}
+
+/** storage.session survives service-worker restarts but not a browser restart. */
+export async function hasBrowserSessionMarker(): Promise<boolean> {
+  try {
+    const result = await chrome.storage.session.get(SESSION_KEY);
+    return result[SESSION_KEY] === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function markBrowserSession(): Promise<void> {
+  try {
+    await chrome.storage.session.set({ [SESSION_KEY]: true });
+  } catch {
+    // A missing marker only causes a safe reset, not a broken session.
+  }
+}
+
 export async function clearAllStoredData(): Promise<void> {
   await chrome.storage.local.remove([
     PROFILES_KEY,
     SELECTED_KEY,
     CONNECTION_KEY,
-    PROXY_ERROR_KEY
+    PROXY_ERROR_KEY,
+    RESTART_KEY
   ]);
 }

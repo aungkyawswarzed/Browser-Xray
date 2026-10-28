@@ -67,12 +67,12 @@ The Xray-core and Go downloads are pinned and checksum-verified in `scripts/comm
 From the project root:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\release.ps1 -Version 1.1.0
+powershell -ExecutionPolicy Bypass -File .\scripts\release.ps1 -Version 1.2.0
 ```
 
 Examples below using `1.0.0` illustrate the same process; replace that version
-with the version being released. The current release tag is `v1.1.0` and its
-artifact filenames contain `1.1.0`.
+with the version being released. The current release tag is `v1.2.0` and its
+artifact filenames contain `1.2.0`.
 
 The script:
 

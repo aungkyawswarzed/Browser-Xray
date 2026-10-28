@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { AppState } from "../types";
 import { sendBackground, truncateMiddle } from "../lib/messages";
+import { MAX_BYPASS_ENTRIES, normalizeBypassEntry } from "../lib/bypass";
 import {
   ArrowLeftIcon,
   CopyIcon,
@@ -31,6 +32,44 @@ export function SettingsView({
   onToast
 }: SettingsViewProps) {
   const [busy, setBusy] = useState(false);
+  const [bypassInput, setBypassInput] = useState("");
+  const [bypassBusy, setBypassBusy] = useState(false);
+
+  const updateBypass = async (next: string[]): Promise<boolean> => {
+    setBypassBusy(true);
+    try {
+      const response = await sendBackground({ type: "setBypassList", bypassList: next });
+      if (!response.ok) throw new Error(response.error);
+      onToast("success", next.length ? "Whitelist updated." : "Whitelist cleared.");
+      return true;
+    } catch (error) {
+      onToast("error", error instanceof Error ? error.message : "Could not update the whitelist.");
+      return false;
+    } finally {
+      setBypassBusy(false);
+    }
+  };
+
+  const addBypass = async () => {
+    const entry = normalizeBypassEntry(bypassInput);
+    if (!entry) {
+      onToast("error", "Enter a domain such as example.com.");
+      return;
+    }
+    if (state.bypassList.includes(entry)) {
+      onToast("info", `${entry} is already on the whitelist.`);
+      return;
+    }
+    if (state.bypassList.length >= MAX_BYPASS_ENTRIES) {
+      onToast("error", `You can whitelist up to ${MAX_BYPASS_ENTRIES} sites.`);
+      return;
+    }
+    if (await updateBypass([...state.bypassList, entry])) setBypassInput("");
+  };
+
+  const removeBypass = (entry: string) => {
+    void updateBypass(state.bypassList.filter((item) => item !== entry));
+  };
 
   const copyDiagnostics = async () => {
     setBusy(true);
@@ -144,12 +183,66 @@ export function SettingsView({
 
         <section className="settings-card">
           <div className="settings-card-head">
+            <GlobeIcon size={16} />
+            <h2>Whitelist</h2>
+            <span className="count-badge">{state.bypassList.length}</span>
+          </div>
+          <p className="settings-copy">
+            These sites connect directly without the tunnel. Subdomains are included, and changes
+            apply immediately while connected.
+          </p>
+          <form
+            className="bypass-add"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void addBypass();
+            }}
+          >
+            <input
+              className="text-input"
+              value={bypassInput}
+              maxLength={253}
+              placeholder="example.com"
+              aria-label="Website to whitelist"
+              onChange={(event) => setBypassInput(event.target.value)}
+            />
+            <button
+              className="secondary-button"
+              type="submit"
+              disabled={bypassBusy || !bypassInput.trim()}
+            >
+              Add
+            </button>
+          </form>
+          {state.bypassList.length > 0 && (
+            <ul className="bypass-list">
+              {state.bypassList.map((entry) => (
+                <li key={entry}>
+                  <span>{entry}</span>
+                  <button
+                    className="mini-icon-button danger"
+                    type="button"
+                    disabled={bypassBusy}
+                    aria-label={`Remove ${entry} from the whitelist`}
+                    title="Remove"
+                    onClick={() => removeBypass(entry)}
+                  >
+                    <TrashIcon size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="settings-card">
+          <div className="settings-card-head">
             <CopyIcon size={16} />
             <h2>Diagnostics</h2>
           </div>
           <p className="settings-copy">
-            Copies helper versions, connection state and recent Xray errors. Server passwords and
-            UUIDs are not included.
+            Copies helper versions, connection state, the whitelist and recent Xray errors. Server
+            passwords and UUIDs are not included.
           </p>
           <button className="secondary-button" onClick={() => void copyDiagnostics()} disabled={busy}>
             <CopyIcon size={15} />

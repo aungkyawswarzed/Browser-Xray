@@ -165,7 +165,7 @@ async function main() {
   try {
     const ping = await first.request("ping");
     check("ping succeeds", ping.ok === true, JSON.stringify(ping));
-    check("ping reports helper version", ping.helperVersion === "1.1.0", ping.helperVersion);
+    check("ping reports helper version", ping.helperVersion === "1.2.0", ping.helperVersion);
     check("ping reports Xray version", ping.xrayVersion === "26.10.21", ping.xrayVersion);
     check("ping reports Windows", String(ping.platform).startsWith("windows/"), ping.platform);
 

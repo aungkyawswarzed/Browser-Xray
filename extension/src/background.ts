@@ -1,12 +1,19 @@
 import { NativeClient } from "./lib/native";
 import { applyProxy, clearProxy, describeProxy } from "./lib/proxy";
+import { normalizeBypassList } from "./lib/bypass";
 import {
+  hasBrowserSessionMarker,
+  loadBypassList,
   loadConnection,
   loadLastProxyError,
   loadProfiles,
+  loadRestartNotice,
   loadSelectedProfileId,
+  markBrowserSession,
+  saveBypassList,
   saveConnection,
   saveLastProxyError,
+  saveRestartNotice,
   saveSelectedProfileId
 } from "./lib/storage";
 import type {
@@ -30,6 +37,9 @@ let nativeUsers = 0;
 let closeTimer: ReturnType<typeof setTimeout> | undefined;
 let proxyErrorTimer: ReturnType<typeof setTimeout> | undefined;
 let recoveryPromise: Promise<void> | null = null;
+let initializationPromise: Promise<void> | null = null;
+let sessionResetPromise: Promise<void> | null = null;
+let browserStarted = false;
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -95,30 +105,53 @@ async function queryHelper(force = false): Promise<HelperInfo> {
 }
 
 async function getState(): Promise<AppState> {
-  const [connection, profiles, selectedProfileId, lastProxyError, helper] = await Promise.all([
+  const [
+    connection,
+    profiles,
+    selectedProfileId,
+    lastProxyError,
+    helper,
+    bypassList,
+    restartNotice
+  ] = await Promise.all([
     loadConnection(),
     loadProfiles(),
     loadSelectedProfileId(),
     loadLastProxyError(),
-    queryHelper()
+    queryHelper(),
+    loadBypassList(),
+    loadRestartNotice()
   ]);
-  return { connection, profiles, selectedProfileId, helper, lastProxyError };
+  return {
+    connection,
+    profiles,
+    selectedProfileId,
+    helper,
+    lastProxyError,
+    bypassList,
+    restartNotice
+  };
 }
 
 async function broadcast(): Promise<void> {
   try {
-    const [connection, profiles, selectedProfileId, lastProxyError] = await Promise.all([
-      loadConnection(),
-      loadProfiles(),
-      loadSelectedProfileId(),
-      loadLastProxyError()
-    ]);
+    const [connection, profiles, selectedProfileId, lastProxyError, bypassList, restartNotice] =
+      await Promise.all([
+        loadConnection(),
+        loadProfiles(),
+        loadSelectedProfileId(),
+        loadLastProxyError(),
+        loadBypassList(),
+        loadRestartNotice()
+      ]);
     const state: AppState = {
       connection,
       profiles,
       selectedProfileId,
       helper: helperInfo,
-      lastProxyError
+      lastProxyError,
+      bypassList,
+      restartNotice
     };
     await chrome.runtime.sendMessage({ type: "stateChanged", state }).catch(() => undefined);
   } catch {
@@ -149,9 +182,10 @@ async function connect(profile: Profile): Promise<void> {
     if (!response.ok) throw new Error(response.error || "The helper could not start the tunnel.");
     if (!response.port) throw new Error("The helper did not return a local proxy port.");
 
-    await applyProxy(response.port);
+    await applyProxy(response.port, await loadBypassList());
     await saveConnection(profileFromConnect(response));
     await saveSelectedProfileId(profile.id);
+    await saveRestartNotice(false);
     helperInfo = { ...helperInfo, available: true };
     await broadcast();
   } catch (error) {
@@ -184,11 +218,47 @@ async function disconnect(): Promise<void> {
   native.close();
   await saveConnection({ phase: "disconnected" });
   await saveLastProxyError(undefined);
+  await saveRestartNotice(false);
   await broadcast();
 }
 
+async function resetBrowserSession(): Promise<void> {
+  if (sessionResetPromise) return sessionResetPromise;
+  sessionResetPromise = (async () => {
+    const connection = await loadConnection();
+    const wasActive =
+      connection.phase === "connected" ||
+      connection.phase === "connecting" ||
+      connection.proxyApplied === true;
+
+    keepNativeAlive = false;
+    await clearProxy().catch(() => undefined);
+    if (wasActive) {
+      try {
+        await withNative(() => native.request({ cmd: "disconnect" }, 3_000));
+      } catch {
+        // The helper may not be running after a browser restart.
+      }
+      native.close();
+    }
+    await saveConnection({ phase: "disconnected" });
+    await saveLastProxyError(undefined);
+    if (wasActive || (await loadRestartNotice())) {
+      await saveRestartNotice(true);
+    }
+    await broadcast();
+  })().finally(() => {
+    sessionResetPromise = null;
+  });
+  return sessionResetPromise;
+}
+
 async function recoverSession(): Promise<void> {
-  const [connection, profiles] = await Promise.all([loadConnection(), loadProfiles()]);
+  const [connection, profiles, bypassList] = await Promise.all([
+    loadConnection(),
+    loadProfiles(),
+    loadBypassList()
+  ]);
   const needsRecovery = connection.phase === "connected" || connection.phase === "connecting";
 
   if (!needsRecovery) {
@@ -213,7 +283,7 @@ async function recoverSession(): Promise<void> {
   try {
     const response = await withNative(() => native.request({ cmd: "status" }, 6_000));
     if (response.ok && response.running && response.port && response.profileId === profile.id) {
-      await applyProxy(response.port);
+      await applyProxy(response.port, bypassList);
       await saveConnection({
         phase: "connected",
         profileId: profile.id,
@@ -241,6 +311,17 @@ function ensureRecovery(): Promise<void> {
     recoveryPromise = recoverSession().catch(() => undefined);
   }
   return recoveryPromise;
+}
+
+async function initializeSession(): Promise<void> {
+  const activeSession = await hasBrowserSessionMarker();
+  if (activeSession && !browserStarted) {
+    // Recovery can take as long as a reconnect; do not block the popup on it.
+    void ensureRecovery();
+    return;
+  }
+  await resetBrowserSession();
+  await markBrowserSession();
 }
 
 async function handleUnexpectedDisconnect(message: string): Promise<void> {
@@ -288,10 +369,11 @@ async function testExit(): Promise<string> {
 }
 
 async function diagnostics(): Promise<string> {
-  const [connection, helper, proxy] = await Promise.all([
+  const [connection, helper, proxy, bypassList] = await Promise.all([
     loadConnection(),
     queryHelper(true),
-    describeProxy()
+    describeProxy(),
+    loadBypassList()
   ]);
   let helperDiagnostics = "";
   if (helper.available) {
@@ -310,6 +392,7 @@ async function diagnostics(): Promise<string> {
     `Xray core: ${helper.xrayVersion ?? "unknown"}`,
     `Data directory: ${helper.dataDir ?? "unknown"}`,
     `Connection: ${JSON.stringify(connection)}`,
+    `Bypass list: ${bypassList.length ? bypassList.join(", ") : "none"}`,
     "",
     "Browser proxy:",
     proxy,
@@ -322,6 +405,7 @@ async function diagnostics(): Promise<string> {
 }
 
 async function handleMessage(message: BackgroundRequest): Promise<BackgroundResponse> {
+  await initializationPromise;
   switch (message.type) {
     case "getState":
       return { ok: true, state: await getState() };
@@ -370,6 +454,25 @@ async function handleMessage(message: BackgroundRequest): Promise<BackgroundResp
       } catch (error) {
         return { ok: false, error: errorMessage(error) };
       }
+    case "setBypassList": {
+      const bypassList = normalizeBypassList(message.bypassList);
+      await saveBypassList(bypassList);
+      const connection = await loadConnection();
+      if (connection.phase === "connected" && connection.port) {
+        try {
+          await applyProxy(connection.port, bypassList);
+        } catch (error) {
+          await disconnect().catch(() => undefined);
+          return { ok: false, error: friendlyHelperError(error) };
+        }
+      }
+      await broadcast();
+      return { ok: true, state: await getState() };
+    }
+    case "dismissRestartNotice":
+      await saveRestartNotice(false);
+      await broadcast();
+      return { ok: true, state: await getState() };
     default:
       return { ok: false, error: "Unsupported action." };
   }
@@ -385,17 +488,11 @@ chrome.runtime.onMessage.addListener(
 );
 
 chrome.runtime.onStartup.addListener(() => {
+  browserStarted = true;
   recoveryPromise = null;
-  void ensureRecovery();
-});
-
-chrome.runtime.onInstalled.addListener((details) => {
-  if (details.reason === "install") {
-    void clearProxy().catch(() => undefined);
-    return;
-  }
-  recoveryPromise = null;
-  void ensureRecovery();
+  initializationPromise = resetBrowserSession()
+    .then(markBrowserSession)
+    .catch(() => undefined);
 });
 
 chrome.proxy.onProxyError.addListener((details) => {
@@ -406,4 +503,4 @@ chrome.proxy.onProxyError.addListener((details) => {
   }, 500);
 });
 
-void ensureRecovery();
+initializationPromise = initializeSession().catch(() => undefined);

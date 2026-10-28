@@ -75,6 +75,8 @@ export interface AppState {
   selectedProfileId: string | null;
   helper: HelperInfo;
   lastProxyError?: string;
+  bypassList: string[];
+  restartNotice: boolean;
 }
 
 export type BackgroundRequest =
@@ -84,7 +86,9 @@ export type BackgroundRequest =
   | { type: "testExit" }
   | { type: "refreshHelper" }
   | { type: "openDataDir" }
-  | { type: "diagnostics" };
+  | { type: "diagnostics" }
+  | { type: "setBypassList"; bypassList: string[] }
+  | { type: "dismissRestartNotice" };
 
 export type BackgroundResponse =
   | { ok: true; state?: AppState; exitIp?: string; diagnostics?: string }
